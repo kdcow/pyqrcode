@@ -1438,6 +1438,36 @@ def _eps(code, version, file_or_path, scale=1, module_color=(0, 0, 0),
         res += ' {0} 0 l'.format(length)
         return res
 
+    def cmyk_to_floats(color, spot=False):
+        """\
+        Converts the provided color into an acceptable format for Postscript's
+         ``setcmykcolor``
+        """
+        def to_float(clr):            
+            if isinstance(clr, float):
+                if not 0.0 <= clr <= 1.0:
+                    raise ValueError('Invalid color "{0}". Not in range 0 .. 1'
+                                     .format(clr))
+                return clr
+            # cmyk is commonly specified as percentage, for example: 0/100/90/10    
+            if not 0 <= clr <= 100:
+                raise ValueError('Invalid color "{0}". Not in range 0 .. 100'
+                                 .format(clr))
+            return clr/100
+
+        if not isinstance(color, (tuple, list)):
+            raise ValueError('Invalid colors provided: {0}'.format(color))
+        if spot and len(color) != 5:
+            raise ValueError("Spotcolor needs 5 elements: colorname,c,m,y,k")
+        if not spot and (len(color) != 4):
+            raise ValueError("CMYK color needs 4 elements: c,m,y,k")
+
+        if spot:        
+            a = color[0], *[to_float(i) for i in color[1:]]
+            return tuple(a)
+        else:    
+            return tuple([to_float(i) for i in color])
+
     def rgb_to_floats(color):
         """\
         Converts the provided color into an acceptable format for Postscript's
@@ -1471,16 +1501,33 @@ def _eps(code, version, file_or_path, scale=1, module_color=(0, 0, 0),
     writeline('/M { moveto } bind def')
     writeline('/m { rmoveto } bind def')
     writeline('/l { rlineto } bind def')
-    mod_color = module_color if module_color == (0, 0, 0) else rgb_to_floats(module_color)
-    if background is not None:
-        writeline('{0:f} {1:f} {2:f} setrgbcolor clippath fill'
-                  .format(*rgb_to_floats(background)))
-        if mod_color == (0, 0, 0):
-            # Reset RGB color back to black iff module color is black
-            # In case module color != black set the module RGB color later
-            writeline('0 0 0 setrgbcolor')
-    if mod_color != (0, 0, 0):
-        writeline('{0:f} {1:f} {2:f} setrgbcolor'.format(*mod_color))
+
+    if isinstance(module_color, (tuple, list)) and (len(module_color) == 5): # spotcolor (spotcolorname,c,m,y,k)
+        mod_color = cmyk_to_floats(module_color, spot=True)
+        # TODO: tint not yet handled (1 setcolor -> 0.0-1.0 setcolor)     
+        writeline('[ /Separation (%s) /DeviceCMYK { dup %08.6f mul exch dup %08.6f mul exch dup %08.6f mul exch %08.6f mul }] setcolorspace 1 setcolor' % (mod_color))
+        if background is not None:
+            raise ValueError("background color not supported in spotcolor mode.")
+
+    elif isinstance(module_color, (tuple, list)) and (len(module_color) == 4): #cmyk
+        module_color = cmyk_to_floats(module_color)
+        writeline('{0:f} {1:f} {2:f} {3:f} setcmykcolor'.format(*module_color))
+        if background is not None:
+            writeline('{0:f} {1:f} {2:f} {3:f} setcmykcolor clippath fill'
+                    .format(*cmyk_to_floats(background)))
+
+    else: #rgb
+        mod_color = module_color if module_color == (0, 0, 0) else rgb_to_floats(module_color)    
+        if background is not None:
+            writeline('{0:f} {1:f} {2:f} setrgbcolor clippath fill'
+                    .format(*rgb_to_floats(background)))
+            if mod_color == (0, 0, 0):
+                # Reset RGB color back to black if module color is black
+                # In case module color != black set the module RGB color later
+                writeline('0 0 0 setrgbcolor')
+        if mod_color != (0, 0, 0):
+            writeline('{0:f} {1:f} {2:f} setrgbcolor'.format(*mod_color))
+        
     if scale != 1:
         writeline('{0} {0} scale'.format(scale))
     writeline('newpath')

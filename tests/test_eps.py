@@ -54,6 +54,36 @@ def test_module_color():
     qr.eps(out, module_color='#195805')
     ok_('setrgbcolor' in out.getvalue())
 
+def test_module_color_cmyk1():
+    qr = pyqrcode.create('test')
+    out = io.StringIO()
+    qr.eps(out, module_color=(20,100,25,10))
+    ok_('setcmykcolor' in out.getvalue())
+    ok_('0.200000' in out.getvalue())
+    ok_('1.000000' in out.getvalue())
+    ok_('0.250000' in out.getvalue())
+    ok_('0.100000' in out.getvalue())
+
+def test_module_color_cmyk2():
+    qr = pyqrcode.create('test')
+    out = io.StringIO()
+    qr.eps(out, module_color=(.2,1.0,.8,.1))
+    ok_('setcmykcolor' in out.getvalue())
+    ok_('0.200000' in out.getvalue())
+    ok_('1.000000' in out.getvalue())
+    ok_('0.800000' in out.getvalue())
+    ok_('0.100000' in out.getvalue())
+
+def test_module_color_spotcolor():
+    qr = pyqrcode.create('test')
+    out = io.StringIO()
+    qr.eps(out, module_color=('RED', 20, 100, 25, 10))
+    ok_('/Separation' in out.getvalue())
+    ok_('(RED)' in out.getvalue())
+    ok_('0.200000' in out.getvalue())
+    ok_('1.000000' in out.getvalue())
+    ok_('0.250000' in out.getvalue())
+    ok_('0.100000' in out.getvalue())
 
 def test_module_color_omit_black():
     qr = pyqrcode.create('test')

@@ -610,6 +610,13 @@ class QRCode:
         triple of integers, e.g. (128, 128, 128). The default *module_color* is
         black. The default *background* color is no background at all.
 
+        *module_color* specified in a quadruple of floats, e.g. (0.2, 1.0, 0.5, 0.2)
+        is interpreted as process color (cmyk) instead of rgb.
+        *background* color is supported as quadruple also.
+        *module_color* specified in a quintuple of one string and 4 floats,
+        e.g. (FIERYRED, 0.2, 0.8, 0.2, 0.1) is interpreted as spotcolorname 
+        and it's substitution as 4 process colors (cmyk). *background* is not supported.
+
         The *quiet_zone* parameter sets how large to draw the border around
         the code. As per the standard, the default value is 4 modules.
 
@@ -617,6 +624,8 @@ class QRCode:
             >>> qr = pyqrcode.create('Hello world')
             >>> qr.eps('hello-world.eps', scale=2.5, module_color='#36C')
             >>> qr.eps('hello-world2.eps', background='#eee')
+            >>> qr.eps('hello-world3.eps', module_color=(.2, .3, .4, 0))
+            >>> qr.eps('hello-world4.eps', module_color=(MYSPOTCLR, .2, .3, .4, 0))
             >>> out = io.StringIO()
             >>> qr.eps(out, module_color=(.4, .4, .4))
         """
